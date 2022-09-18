@@ -66,6 +66,51 @@
     @apply flex justify-center w-full relative;
 }
 
+
+.sd-tappable-item {
+    @apply flex flex-col;
+}
+
+.sd-tappable-price {
+    font-family: "BookmanITC Lt BT", sans-serif;
+    @apply text-2xl flex justify-between;
+}
+
+.sd-tappable-counter {
+ @apply block
+ w-full
+ px-3
+ /*py-1.5*/
+ text-base
+ bg-white bg-clip-padding
+ border border-solid border-gray-300
+ rounded
+ transition
+ ease-in-out
+ m-0
+ focus:text-gray-700 focus:bg-white focus:border-gray-600 focus:outline-none
+}
+
+.sd-tappable-add-to-cart {
+    width: 30px;
+    height: 30px;
+    @apply transition ease-in-out hover:scale-110
+    cursor-pointer
+    outline outline-offset-2 outline-1 outline-white hover:outline-red-100
+    focus:outline-red-100
+    focus:scale-110
+    w-1/3
+}
+
+.sd-tappable-options-container {
+    @apply flex flex-row justify-between items-center w-2/3;
+}
+
+.sd-tappable-choice-name {
+    @apply flex flex-col text-lg capitalize leading-4 text-left justify-center w-1/3;
+    font-family: "Helvetica Condensed", sans-serif;
+}
+
 .sd-product-item {
     @apply flex flex-row justify-between items-start
 }

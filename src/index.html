@@ -20,9 +20,12 @@
     <div class="sd-promo w-full flex items-center justify-center">
         <img src="img/realdeal.png" class="bg-cover w-2/3 lg:w-1/2" alt="shake-dog-promo">
     </div>
+    <sd-menu-page shopId="212" townId="21" cityId="11"></sd-menu-page>
     <div id="front-page" class="columns-1 lg:columns-2 mt-8">
+
         <div class="w-full sd-menu-section-container relative">
             <div class="sd-menu-section-header">starters / sides </div>
+            <sd-tappable-menu-item price="10" category="20" dish="302" title="Whatever"></sd-tappable-menu-item>
             <sd-menu-item name="MOZZARELLA CHEESE STICKS" numbers="(1,6,7,12)" price="6.00"></sd-menu-item>
             <sd-menu-item name="Garlic Bread" numbers="(1,7,11)" price="5.00"></sd-menu-item>
             <sd-menu-item name="Garlic bread with cheese" numbers="(1,3,7,11)" price="6.00"></sd-menu-item>
@@ -366,8 +369,15 @@
 
 
 <script>
-    const stroked_item_template = document.createElement('template');
-    stroked_item_template.innerHTML = `
+
+    const domain = "http://www.whatsfordinner.local";
+    // const shopId = "743"; // shake dog on live server
+    const shopId = "212";//"512"; // hard rock cafe on test server
+    const townId = "21"//"18";
+    const cityId = "11"; // test server Athelon
+
+    const strokedItemTemplate = document.createElement('template');
+    strokedItemTemplate.innerHTML = `
 
                                         <style> @import "index-o.css"; </style>
                                         <div class="stroked-menu-item">
@@ -375,11 +385,15 @@
                                             <div class="stroked-menu-ingredients"></div>
                                         </div>`;
 
+    function addToCartAction() {
+        console.log("Add to cart requested")
+    }
+
     class StrokedItem extends HTMLElement {
         constructor() {
             super();
             this._shadowRoot = this.attachShadow({'mode': 'open'});
-            this._shadowRoot.appendChild(stroked_item_template.content.cloneNode(true));
+            this._shadowRoot.appendChild(strokedItemTemplate.content.cloneNode(true));
             this._shadowRoot.querySelector('div.stroked-menu-name').innerText = this.getAttribute('item-name');
             this._shadowRoot.querySelector('div.stroked-menu-ingredients').innerText = this.getAttribute('ingredients');
         }
@@ -402,8 +416,8 @@
         }
     }
 
-    const sd_menu_entry = document.createElement('template');
-    sd_menu_entry.innerHTML = `
+    const sdMenuEntry = document.createElement('template');
+    sdMenuEntry.innerHTML = `
                 <style> @import "index-o.css"; </style>
                 <div class="sd-product-item">
                 <div class="flex flex-col">
@@ -417,7 +431,7 @@
         constructor() {
             super();
             this._shadowRoot = this.attachShadow({'mode' : 'closed'});
-            this._shadowRoot.appendChild(sd_menu_entry.content.cloneNode(true));
+            this._shadowRoot.appendChild(sdMenuEntry.content.cloneNode(true));
             if(!this.getAttribute('new')) {
                 this._shadowRoot.querySelector("div.sd-product-name > span.sd-new").remove();
             }
@@ -436,9 +450,735 @@
         }
     }
 
+    class SdTappableMenuEntry extends HTMLElement {
+        constructor() {
+            super();
+
+            this.attachShadow({'mode': 'open'});
+
+            this.loading = true;
+            this.shimmerMode = false;
+
+            this.unitPrice = parseFloat(this.getAttribute("price"));
+            this.categoryId = this.getAttribute("category");
+            this.dishId = this.getAttribute("dish");
+            this.title = this.getAttribute("title");
+            if(this.hasAttribute("description")) {
+                this.description = this.getAttribute("description");
+            }
+            if(this.hasAttribute("options")) {
+                this.options = JSON.parse(atob(this.getAttribute("options")));
+                this.popupOptions = this.options.filter(e => e.display_in_popup === '1');
+                this.noPopupOptions = this.options.filter(e => e.display_in_popup !== '1');
+
+                this.optionsCounter = {};
+                this.options.forEach(o => {
+                    o.choiceList.forEach(c => {
+                        this.optionsCounter[`${c.choiceId}`] = {
+                            count: 1,
+                            unitPrice: parseFloat(c.price)
+                        }
+                    })
+                });
+                // console.log(this.options);
+            }
+            // TODO Add groups
+
+            this.counter = 1; // Used only when no dish options are passed.
+
+        }
+
+        async connectedCallback() {
+            this.shadowRoot.addEventListener("change", (event) => {
+                this.onItemCounterUpdate(event);
+            });
+
+            this.shadowRoot.addEventListener("click", (event) => {
+                if(event.target.id === `atc-${this.categoryId}-${this.dishId}`) {
+                    addToCartAction();
+                }
+            })
+
+            this.render();
+        }
+
+        onItemCounterUpdate(event) {
+            // Event came from choice options. So update optionsCounter
+            if(event.target.hasAttribute('cid')) {
+                const choiceId = event.target.getAttribute('cid');
+                this.optionsCounter[choiceId].count = event.target.value;
+                this.shadowRoot
+                    .getElementById(`price-${this.categoryId}-${this.dishId}-${choiceId}`)
+                    .innerText = `${(this.optionsCounter[choiceId].count * this.optionsCounter[choiceId].unitPrice).toFixed(2)}`;
+            } else {
+                this.counter = parseInt(event.target.value);
+                this.shadowRoot
+                    .getElementById(`price-${this.categoryId}-${this.dishId}`)
+                    .innerText = `${(this.counter * this.unitPrice).toFixed(2)}`;
+            }
+        }
+
+        testMethod(event) {
+            console.log("update event triggered", event);
+        }
+
+        renderChoiceList() {
+
+            const defaultInteractableSection = `<div class="sd-tappable-price">
+                            <div class="sd-tappable-choice-name"></div>
+                            <div class="sd-tappable-options-container">
+                            <span class="w-1/3"><input class="sd-tappable-counter" type="number" min="1" max="100" value="${this.counter}"></span>
+                            <span class="w-1/3"><sup class="font-bold">€</sup><span id="price-${this.categoryId}-${this.dishId}">${(this.counter * this.unitPrice).toFixed(2)}</span></span>
+                            <button class="sd-tappable-add-to-cart" style="width: 30px; height: 30px">
+                                <svg id="atc-${this.categoryId}-${this.dishId}" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="100%" height="100%" viewBox="0 0 256 256">
+                                 <title id="add-to-cart-svg">Add To Cart</title>
+                                <g stroke-miterlimit="10" stroke-width="0" transform="matrix(2.81 0 0 2.81 1.407 1.407)"><path d="M72.975 58.994h-41.12a3.5 3.5 0 0 1-3.347-2.477L15.199 13.006H3.5a3.5 3.5 0 1 1 0-7h14.289a3.5 3.5 0 0 1 3.347 2.476l13.309 43.512h36.204l10.585-25.191h-6.021a3.5 3.5 0 1 1 0-7H86.5a3.5 3.5 0 0 1 3.227 4.856L76.201 56.85a3.5 3.5 0 0 1-3.226 2.144z"/><circle cx="28.88" cy="74.33" r="6.16"/><circle cx="74.59" cy="74.33" r="6.16"/><path d="M63.653 21.403a3.499 3.499 0 0 0-4.949 0L53.3 26.807v-17.3a3.5 3.5 0 1 0-7 0v17.3l-5.404-5.404a3.5 3.5 0 0 0-4.95 4.95L47.324 37.73c.163.163.343.309.535.438.084.056.176.095.264.143.112.061.22.129.338.178.115.047.234.075.353.109.1.03.197.068.301.089.226.045.456.069.685.069s.459-.024.685-.069c.104-.021.2-.059.301-.089.118-.035.238-.062.353-.109.119-.049.227-.117.338-.178.088-.048.18-.087.264-.143.193-.129.372-.274.535-.438l11.378-11.377a3.5 3.5 0 0 0-.001-4.95z"/></g></svg>
+                            </button>
+                            </div>
+                        </div>`;
+
+            if(this.options) {
+                if(this.noPopupOptions.length > 0) {
+                    const allChoiceList = this.noPopupOptions.map(e => e.choiceList).flat();
+                    return allChoiceList.map(c => {
+                        return `<div class="sd-tappable-price">
+                            <div class="sd-tappable-choice-name"><span>${c.choiceName ?? ''}</span><span>${c.choiceDesc ?? ''}</span></div>
+                            <div class="sd-tappable-options-container">
+                            <span class="w-1/3"><input class="sd-tappable-counter" type="number" min="1" max="100" cid="${c.choiceId}" value="${this.optionsCounter[`${c.choiceId}`].count}" onchange="(event) => {this.testMethod(event)}"></span>
+                            <span class="w-1/3"><sup class="font-bold">€</sup><span id="price-${this.categoryId}-${this.dishId}-${c.choiceId}">${(this.optionsCounter[`${c.choiceId}`].count * this.optionsCounter[`${c.choiceId}`].unitPrice).toFixed(2)}</span></span>
+                            <button class="sd-tappable-add-to-cart" style="width: 30px; height: 30px">
+                                <svg id="atc-${this.categoryId}-${this.dishId}-${c.choiceId}" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="100%" height="100%" viewBox="0 0 256 256">
+                                 <title id="add-to-cart-svg">Add To Cart</title>
+                                <g stroke-miterlimit="10" stroke-width="0" transform="matrix(2.81 0 0 2.81 1.407 1.407)"><path d="M72.975 58.994h-41.12a3.5 3.5 0 0 1-3.347-2.477L15.199 13.006H3.5a3.5 3.5 0 1 1 0-7h14.289a3.5 3.5 0 0 1 3.347 2.476l13.309 43.512h36.204l10.585-25.191h-6.021a3.5 3.5 0 1 1 0-7H86.5a3.5 3.5 0 0 1 3.227 4.856L76.201 56.85a3.5 3.5 0 0 1-3.226 2.144z"/><circle cx="28.88" cy="74.33" r="6.16"/><circle cx="74.59" cy="74.33" r="6.16"/><path d="M63.653 21.403a3.499 3.499 0 0 0-4.949 0L53.3 26.807v-17.3a3.5 3.5 0 1 0-7 0v17.3l-5.404-5.404a3.5 3.5 0 0 0-4.95 4.95L47.324 37.73c.163.163.343.309.535.438.084.056.176.095.264.143.112.061.22.129.338.178.115.047.234.075.353.109.1.03.197.068.301.089.226.045.456.069.685.069s.459-.024.685-.069c.104-.021.2-.059.301-.089.118-.035.238-.062.353-.109.119-.049.227-.117.338-.178.088-.048.18-.087.264-.143.193-.129.372-.274.535-.438l11.378-11.377a3.5 3.5 0 0 0-.001-4.95z"/></g></svg>
+                            </button>
+                            </div>
+                        </div>`
+                    }).join("");
+                } else {
+                    // If this dish has options, but they are meant to be displayed in popups only, display default
+                    return defaultInteractableSection;
+                }
+
+            } else {
+                return defaultInteractableSection;
+            }
+        }
+
+        render() {
+            let dom = `<style> @import "index-o.css"; </style>`;
+            if(this.shimmerMode) {
+                dom += '<p>shim shim </p>';
+            } else {
+                dom += `
+                <div class="sd-tappable-item" id="${this.categoryId}-${this.dishId}">
+                    <div class="flex flex-col">
+                        <div class="sd-product-name"><span class="name">${this.title}</span></div>
+                        <div class="sd-product-desc">${this.description ?? ""}</div>
+                    </div>
+                    ${this.renderChoiceList()}
+                </div>`;
+            }
+
+
+            this.shadowRoot.innerHTML = dom;
+        }
+    }
+
+    class SdMenuSectionEntry extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({'mode': 'open'});
+            //this._shadowRoot.appendChild(sdMenuSectionEntryTemplate.content.cloneNode(true));
+            this.loading = true;
+            this.loadingError = false;
+            this.hideSelf = false; // Hide this section from user
+
+            this.shopId = this.getAttribute("shop");
+            this.townId = this.getAttribute("town");
+            this.categoryId = this.getAttribute("category");
+            this.title = this.getAttribute("title");
+
+            this.render();
+        }
+
+        async connectedCallback() {
+            this.loading = true;
+            const menuItems = await this.getMenuItemsByCategoryId(this.shopId, this.townId, this.categoryId);
+            console.log(menuItems);
+            if(menuItems && menuItems.menu_list && menuItems.menu_list.length > 0) {
+                this.items = menuItems.menu_list;
+                this.render();
+            } else {
+                // This section does not contain any items. Do not show
+                this.hideSelf = true;
+            }
+        }
+
+        attributeChangedCallback(attrName, oldVal, newVal) {
+            this.render();
+        }
+
+        async getMenuItemsByCategoryId(shopId, townId, categoryId) {
+            this.loadingError = false;
+            try {
+                const payload = {
+                    'shopId': shopId,
+                    'townId': townId,
+                    'categoryId': categoryId
+                }
+                const response = await fetch(`${domain}/service/customer/get-menu-by-shop-n-category`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    mode: "cors"
+                });
+                this.loading = false;
+                return await response.json();
+            } catch (error) {
+                this.loadingError = true;
+                this.loading = false;
+                console.error(error);
+                return null;
+            }
+        }
+
+        renderHeader() {
+            return `<div class="sd-menu-section-header">${this.title}</div>`;
+        }
+
+        renderDisclaimer() {
+            if(this.hasAttribute("disclaimer")) {
+                return `<div class="sd-in-menu-disclaimer">${this.getAttribute("disclaimer")}</div>`;
+            } else {
+                return "";
+            }
+        }
+
+        renderItems() {
+            if(this.items) {
+                return this.items.map((i) => {
+                    return `<sd-tappable-menu-item
+                        price="${i.basic.price}"
+                        category="${i.basic.categoryId}"
+                        dish="${i.basic.dishId}"
+                        title="${i.basic.title}"
+                        ${i.basic.description ? `description="${i.basic.description}"` : ''}
+                        ${i.optionList ? `options="${btoa(JSON.stringify(i.optionList))}"` : ''}
+                ></sd-tappable-menu-item>`;
+                }).join("");
+
+            }
+            return "";
+        }
+
+        render() {
+            let dom = '<style> @import "index-o.css"; </style>';
+
+            if(this.hideSelf) {
+                this.shadowRoot.innerHTML = "";
+                return;
+            }
+
+            if(this.loading) {
+                dom += "<p>Loading</p>";
+            } else if(this.loadingError) {
+                dom += "<p>Loading Error :( </p>";
+            } else {
+                dom += `
+               <div class="w-full sd-menu-section-container relative ${this.getAttribute("ind") === "0" ? '' : 'mt-10'}">
+                    ${this.renderHeader()}
+                    ${this.renderDisclaimer()}
+                    ${this.renderItems()}
+               </div>`;
+            }
+
+            this.shadowRoot.innerHTML = dom;
+        }
+
+    }
+
+    class SdMenuPage extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({"mode": "open"});
+
+            this.loading = true;
+            this.loadingError = false;
+            this.empty = false;
+
+            this.shopId = this.getAttribute("shopId");
+            this.townId = this.getAttribute("townId");
+            this.cityId = this.getAttribute("cityId");
+
+            this.render();
+        }
+
+        async connectedCallback() {
+            this.loading = true;
+            const categoryList = await this.getShopMenuCategory(this.shopId);
+            console.log(categoryList);
+            if(categoryList && categoryList.length > 0) {
+                this.menuCategory = categoryList;
+            } else {
+                this.empty = true;
+            }
+            this.render();
+        }
+
+        async getShopMenuCategory(shopId) {
+            this.loading = true;
+            const shopMenuCategoryURL = `${domain}/service/customer/get-shop-menu-category`;
+            try {
+                const payload = {
+                    shopId: shopId
+                }
+                const response = await fetch(shopMenuCategoryURL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    mode: "cors",
+                });
+                this.loading = false;
+                return await response.json();
+            } catch (error) {
+                this.loading = false;
+                this.loadingError = true;
+                console.error(error);
+            }
+        }
+
+        attributeChangedCallback(attrName, oldVal, newVal) {
+            this.render();
+        }
+
+        renderMenuSections() {
+            return this.menuCategory.map((section, index) =>
+                `<sd-menu-section
+                        ind="${index}"
+                        town="${this.townId}"
+                        city="${this.cityId}"
+                        shop="${this.shopId}"
+                        category="${section.menuCatId}"
+                        title="${section.title}"
+                        ></sd-menu-section>`).join("");
+        }
+
+        render() {
+            let dom = `<style> @import "index-o.css"; </style>`;
+            if(this.loading) {
+                dom += "<p>Loading menu page</p>";
+            } else if(this.loadingError) {
+                dom += "<p>Failed to load menu</p>";
+            } else {
+                dom += `<div class="columns-1 lg:columns-2 mt-8">${this.renderMenuSections()}</div>`
+            }
+
+            this.shadowRoot.innerHTML = dom;
+        }
+    }
+
     window.customElements.define('menu-entry', LowerMenuEntry);
     window.customElements.define('stroked-item', StrokedItem);
     window.customElements.define('sd-menu-item', SdMenuEntry);
+    window.customElements.define('sd-menu-section', SdMenuSectionEntry);
+    window.customElements.define('sd-menu-page', SdMenuPage);
+    window.customElements.define('sd-tappable-menu-item', SdTappableMenuEntry);
+
+
+    const cartSessionTokenURL = `${domain}/service/customer/get-app-token`;
+    //const shopItemsURL = `${domain}/service/customer/v1/get-shop-details`;
+    const shopItemsURL = `${domain}/getMenuItem` // Needs to be form data
+
+    const addToCartURL = `${domain}/service/customer/v2/add-item-to-cart`;
+    const getCartItemsURL = `${domain}/service/customer/get-cart-item`;
+
+    const shopMenuCategoryURL = `${domain}/service/customer/get-shop-menu-category`;
+    const shopMenuItemByCategoryURL = `${domain}/service/customer/get-menu-by-shop-n-category`;
+
+    const getShopTimeSlotListURL = `${domain}/service/customer/v1/get-shop-time-slot-list`;
+    const setShopTimeSlotURL = `${domain}/service/customer/v1/update-shop-time-slot`;
+
+    const addOrderCommentURL = `${domain}/service/customer/add-comments`;
+
+    const proceedToCheckoutURL = `${domain}/service/customer/v2/proceed-checkout`;
+
+    const saveCustomerContactURL = `${domain}/service/customer/v2/save-order-contact`;
+
+    window.addEventListener('message', function(event){
+        console.log("Browser says my address id is: ", event.data);
+    });
+
+
+
+    let customerName = "WEB Api Test";
+    let customerPhone = "017425999133";
+    let customerEmail = "web@api_test.wfd";
+
+    const DELIVERY_METHOD = {
+        collection: 1,
+        delivery: 2,
+        dropInPub: 1
+    };
+
+    const DELIVERY_DAY = {
+        today: 1,
+        tomorrow: 2
+    };
+
+    const DELIVERY_SCHEDULE = {
+        now: 1,
+        later: 2
+    }
+
+    // https://stackoverflow.com/questions/6248666/how-to-generate-short-uid-like-ax4j9z-in-js
+    function generateUID() {
+        return ("000" + ((Math.random() * 46656) | 0).toString(36)).slice(-3) + Date.now() + ("000" + ((Math.random() * 46656) | 0).toString(36)).slice(-3);
+    }
+
+    async function getBillingAddressURL(userId, deliveryAddressId) {
+        return `${domain}/customer-app-web-view-v2/billing-address-android-app?userId=${userId}&deliveryAddressId=${deliveryAddressId}`
+    }
+
+    async function saveCustomerContactDetails(sessionId, name, email, phone, deliveryType) {
+        try {
+            const payload = {
+                user: {
+                    name,
+                    email,
+                    phoneNo: phone,
+                    userId: "45938"
+                },
+                api_token: sessionId,
+                delivery_method: deliveryType, // collection
+                address: {
+                    city_id: cityId,
+                    town_id: townId
+                }
+            };
+            const response = await fetch(saveCustomerContactURL, {
+                method: 'POST',
+                mode: "cors",
+                body: JSON.stringify(payload)
+            });
+
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+            return jsonResponse;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function addCommentToOrder(sessionId, shopId, comment) {
+        try {
+            const payload = {
+                comments: `TABLE 10\n ${comment}`,
+                shopId: shopId,
+                api_token: sessionId
+            }
+            const response = await fetch(addOrderCommentURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: 'cors'
+            });
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+            return jsonResponse;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function proceedToCheckout(sessionId, cityId, townId) {
+        try {
+            const payload = {
+                'city_id' : cityId,
+                'town_id' : townId,
+                'api_token': sessionId
+            };
+
+            const response = await fetch(proceedToCheckoutURL, {
+                method: 'POST',
+                mode: 'cors',
+                body: JSON.stringify(payload)
+            });
+
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+            return jsonResponse;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function getCartItem(sessionId) {
+        try {
+            const payload = {api_token: sessionId};
+            const response = await fetch(getCartItemsURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: "cors"
+            });
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+            return jsonResponse;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function getShopTimeSlots(shopId) {
+        try {
+            const payload = {
+                'shopId' : shopId
+            }
+            const response = await fetch(getShopTimeSlotListURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: "cors"
+            });
+
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+            return jsonResponse;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function setShopTimeSlot(sessionId, shopId, deliveryMethod, deliverySchedule, deliveryDay, timeSlot) {
+        try {
+            const payload = {
+                api_token: sessionId,
+                shopId: shopId,
+                deliveryMethod: deliveryMethod,
+                nowLaterTime: deliverySchedule,
+                orderProcessDay: deliveryDay,
+                orderHours: timeSlot
+            };
+
+            const response = await fetch(setShopTimeSlotURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: "cors"
+            });
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+            return jsonResponse;
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function addItemToCart(sessionId) {
+        try {
+            const payload =          {
+                title: "Naga wings",
+                description: "Prepared with chicken wings, sauce and special ingredients.",
+                dishId: "16869", //"54586",
+                price: "30",
+                quantity: 2,
+                shopId: "212", //"512",
+                shopName: "My Shop name",
+                // addonIds: "179522,170524",
+                // optionChoiceIds: "605631, 605630",
+                api_token: sessionId
+            }
+            const response = await fetch(addToCartURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: "cors",
+            });
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+            return jsonResponse;
+        }catch (error) {
+            console.error(error);
+        }
+    }
+
+    // async function getShopMenuCategory(shopId) {
+    //     try {
+    //         const payload = {
+    //             shopId: shopId
+    //         }
+    //         const response = await fetch(shopMenuCategoryURL, {
+    //             method: 'POST',
+    //             body: JSON.stringify(payload),
+    //             mode: "cors",
+    //         });
+    //         const jsonResponse = await response.json();
+    //         console.log(jsonResponse);
+    //         return jsonResponse;
+    //     } catch (error) {
+    //         // TODO: Catch me uwu
+    //         console.error(error);
+    //     }
+    // }
+
+    async function getShopMenuItemByCategory(shopId, townId, categoryId) {
+        try {
+            const payload = {
+                'shopId' : shopId,
+                'townId' : townId,
+                'categoryId': categoryId
+            }
+            const response = await fetch(shopMenuItemByCategoryURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: "cors"
+            });
+
+            return await response.json();
+        } catch (error) {
+            // TODO: catch me uwu
+            console.error(error);
+        }
+    }
+
+    async function getShopMenu(sessionId, shopId, townId) {
+        try {
+            const payload = {
+                'shopId' : shopId,
+                'api_token': sessionId,
+                'townId': townId
+            }
+            const response = await fetch(shopItemsURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: "cors"
+            });
+            console.log(response.body);
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+        } catch (error) {
+            // TODO: Catch me uwu
+            console.error(error);
+        }
+    }
+
+    async function getWFDToken(deviceId) {
+        try {
+            const payload = {
+                'deviceToken': deviceId
+            };
+            const response = await fetch(cartSessionTokenURL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                mode: 'cors',
+            });
+            const jsonResponse = await response.json();
+            return jsonResponse["api_token"];
+        } catch (error) {
+            console.error(error);
+            // TODO: Catch me
+        }
+    }
+
+    (async () => {
+        // WFD menu fetching and order placing
+        let deviceId = localStorage.getItem("deviceId");
+        let sessionId = localStorage.getItem("sessionId");
+        if(!deviceId) {
+            deviceId = generateUID();
+            localStorage.setItem("deviceId", deviceId);
+        }
+        if(!sessionId || sessionId === "undefined") {
+            sessionId = await getWFDToken(deviceId);
+            if(!sessionId) {
+                alert("Sorry! Something went wrong and I won't be able to take your order digitally. Please seek a waiter. Thank you.")
+            } else {
+                localStorage.setItem("sessionId", sessionId);
+            }
+        }
+
+        //const shopMenu = await getShopMenu(sessionId, shopId, townId);
+        //console.log(shopMenu);
+
+        // you need to fetch the category first
+        // then fetch menu items by the category (whyyyy)
+        // const shopMenuCategory = await getShopMenuCategory(shopId);
+        // for(let i = 0; i < shopMenuCategory.length; i++) {
+        //     const menuItems = await getShopMenuItemByCategory(shopId, townId, shopMenuCategory[i].categoryId);
+        //     console.log(menuItems);
+        // }
+
+
+        // Add to cart payload
+        /*
+
+        select a time slot first
+
+        {
+                details: item details in string,
+                dishId: string,
+                price: double,
+                quantity: string,
+                shopId: string
+                shopName: shop name in string,
+                title: item name in string,
+                addonIds: addon id separated by comma
+                optionChoiceIds: option ids separated by comma
+                groupAddonIds: option ids separated by comma
+                api_token: session id token for cart tracking
+         }
+
+         {
+                title: "Naga wings",
+                description: "Prepared with chicken wings, sauce and special ingredients.",
+                dishId: "54586",
+                price: "30",
+                quantity: 2,
+                shopId: "512",
+                shopName: "My Shop name",
+                addonIds: "179522,170524",
+                optionChoiceIds: "605631, 605630",
+                api_token
+         }
+
+         apparently it returns status and index. Index is the item index in server database.
+         */
+
+
+
+        // const timeslot = await getShopTimeSlots(shopId);
+        // console.log(timeslot);
+        // const updateTimeSlot = await setShopTimeSlot(sessionId, shopId, DELIVERY_METHOD.collection, DELIVERY_SCHEDULE.now, DELIVERY_DAY.today, timeslot['collectionHours']['todayHoursData'][0]);
+        // console.log(updateTimeSlot);
+        // const res = await addItemToCart(sessionId);
+        // const cartItems = await getCartItem(sessionId);
+        // // Check minimum order
+        // const checkoutAttempt = await proceedToCheckout(sessionId, cityId, townId);
+
+        // Compute total payment on client side
+        // Checkout attempt is successful, collect user's name, email and phone number
+        // Set order delivery method to "collection" for now
+
+        // const saveCustomerDetails = await saveCustomerContactDetails(sessionId, customerName, customerEmail, customerPhone, DELIVERY_METHOD.collection);
+
+        // Status 1 == collection processing success. Status 2 == Delivery fee updated
+        // Save the userId, it will be used to process payment
+
+        // handle paymentIds [paymentIds]
+        // 1 == Visa/Master card
+        // 2 == Cash on delivery
+        // 4 == Gift Voucher
+
+        // Ask for payment method
+
+        // If method is 1 then ask for address
+        // const billURL = await getBillingAddressURL(saveCustomerDetails.userId, "");
+        // console.log();
+        //
+        // const frame = document.createElement("iframe");
+        //
+        // frame.setAttribute("src", `${billURL}`);
+        // document.body.appendChild(frame);
+
+        // End wait for address (see "message" listener)
+
+        // Move the user to payment page
+        // String url = String.format("%srevolut-payment-customer-app?orderId=%s&publicId=%s&revolutId=%s&amount=%s&type=1", Constraints.BASE_URL, orderId, publicId, revolutId, amount);
+
+    })();
 </script>
 </body>
 </html>
