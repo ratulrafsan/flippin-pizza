@@ -48,6 +48,10 @@
   --sd-menu-section-borer : #a8a8a8;
 }
 
+.disclaimer-for-sm {
+    @apply flex flex-row lg:hidden justify-center gap-6 items-center w-full;
+}
+
 #sd-menu-body {
     border-image: url("data:image/png;base64,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") 56 fill / 21px / 0 repeat ;
     border-image-outset: 0 12px 20px;
@@ -320,4 +324,179 @@ body {
 .dippings {
     font-family: "Helvetica Condensed", sans-serif;
     @apply text-center;
+}
+
+
+.group-selection {
+    @apply flex flex-row flex-wrap gap-2 w-full justify-around;
+}
+
+.group-selection-input-container{
+    @apply flex items-start mb-4 w-5/12;
+}
+
+.group-selection-input {
+    @apply w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 focus:ring-2;
+}
+
+.group-selection-label {
+    @apply ml-2 text-sm font-medium text-gray-900 ;
+}
+
+.group-selection-name {
+    font-family: "BookmanITC Lt BT", sans-serif;
+    @apply text-xl w-full text-left;
+}
+
+.modal {
+    padding-top: 5vh;
+    @apply w-full h-full
+    overflow-auto
+    fixed left-0 top-0
+    z-10
+    bg-black bg-opacity-40
+    hidden
+}
+
+.modal-content {
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+    @apply relative bg-white p-0 w-11/12 md:w-3/4 lg:w-1/3 m-auto rounded-lg shadow;
+}
+
+@-webkit-keyframes animatetop {
+    from {top:-300px; opacity:0}
+    to {top:0; opacity:1}
+}
+
+@keyframes animatetop {
+    from {top:-300px; opacity:0}
+    to {top:0; opacity:1}
+}
+
+.close {
+    @apply text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-xl p-1.5 ml-auto inline-flex items-center hover:cursor-pointer;
+}
+
+.modal-header {
+    font-family: "BookmanITC Lt BT", sans-serif;
+    @apply flex justify-between items-start p-4 rounded-t border-b text-2xl font-semibold text-gray-900;
+}
+
+.modal-body {
+    @apply p-6 space-y-6 flex justify-center w-full flex-col
+}
+
+.modal-footer {
+    @apply flex items-center p-6 space-x-2 rounded-b border-t border-gray-200;
+}
+
+.modal-atc-btn {
+    @apply text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center
+}
+
+.modal-add-comment-btn {
+    @apply text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center
+}
+
+svg, path {
+    pointer-events: none;
+}
+
+.floating-cart {
+    width: 60px;
+    height: 60px;
+    @apply fixed bottom-6 right-6
+    rounded-full
+    shadow-md shadow-green-50
+    text-white text-center
+    bg-red-800
+    cursor-pointer
+    transform hover:scale-125 ease-in-out duration-75
+}
+
+.floating-cart-icon {
+    pointer-events: none;
+    @apply w-full h-full flex justify-center items-center text-white -mt-7;
+}
+
+.floating-cart-count {
+    pointer-events: none;
+    width: 20px;
+    height: 20px;
+    @apply relative -right-4 -top-4
+    text-black font-bold
+    rounded-full
+    bg-white
+    p-2
+}
+
+.cart-container {
+    @apply flex flex-col w-full
+}
+
+.cart-desc-n-del-container {
+    @apply flex flex-row w-full;
+}
+
+.cart-item-desc-container {
+    @apply w-4/5 flex flex-col w-full
+}
+
+.cart-item-name {
+    @apply font-bold text-xl
+}
+
+.cart-item-details {
+    @apply font-medium text-sm
+}
+
+.cart-item-del-btn {
+    @apply w-1/5 flex justify-center items-center
+    transform hover:scale-110 ease-in-out delay-75
+    cursor-pointer
+}
+
+.cart-quantity-n-price-container {
+    @apply flex flex-row w-full;
+}
+
+.cart-quantity-container {
+    @apply flex flex-row gap-2 w-3/4 items-center justify-start text-center;
+}
+
+.cart-quantity-change-btn {
+    @apply font-bold text-gray-700 font-mono
+    bg-gray-100 border-2 border-gray-400 rounded-full
+    flex items-center justify-center
+    w-7 h-7
+    cursor-pointer
+    transform delay-75 ease-in-out hover:scale-110
+    select-none
+}
+
+.cart-item-quantity {
+    @apply font-bold text-xl;
+}
+
+.cart-item-price {
+    @apply w-2/4 text-red-600 font-bold text-xl flex justify-end items-end;
+}
+
+.customer-info-label {
+    @apply block mb-2 text-sm font-medium text-gray-900;
+}
+
+.customer-info-input {
+    @apply bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5;
+}
+
+.customer-info-error {
+    @apply block text-sm font-medium text-red-600;
+}
+
+.sd-tappable-select {
+    @apply bg-gray-50 border border-gray-300 text-gray-900 mb-2 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-3
 }
